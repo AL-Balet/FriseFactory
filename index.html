@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Frise Factory</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800;900&family=Source+Sans+Pro:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=20260911-active-palette-text">
+    <script src="app.js?v=20260911-orientation-buttons" defer></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="header-brand">
+        <img class="brand-logo" src="assets/branding/la-classe-dhistoire.png?v=transparent" alt="Logo de La Classe d'Histoire">
+        <div class="title-block">
+          <p class="kicker">La Classe d'Histoire</p>
+          <h1>Frise Factory</h1>
+          <p class="subtitle">Créez, personnalisez et exportez vos frises chronologiques.</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="header-icon-button language-button" id="langToggle" type="button" aria-label="Passer en anglais" title="Passer en anglais">FR</button>
+        <button class="header-icon-button about-button" id="aboutButton" type="button" aria-label="Informations" aria-controls="aboutDialog" aria-expanded="false" title="Informations">i</button>
+        <button class="header-icon-button" id="themeToggle" type="button" aria-label="Changer de thème" title="Changer de thème">◐</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="panel editor-panel" aria-labelledby="editorTitle">
+        <div class="panel-head">
+          <div>
+            <h2 class="step-title" id="editorTitle"><img class="step-number" src="assets/steps/step-1.svg" alt="Étape 1"><span>Je choisis mes repères</span></h2>
+          </div>
+          <div class="file-actions">
+            <button id="sampleButton" type="button">Exemple</button>
+            <button id="clearButton" type="button">Vider</button>
+          </div>
+        </div>
+
+        <label class="field">
+          <span>Titre de la frise</span>
+          <input id="timelineTitle" type="text" value="Les grands repères de la IIIe République">
+        </label>
+
+        <label class="field">
+          <span>Sous-titre de la frise</span>
+          <input id="timelineSubtitle" type="text" placeholder="Facultatif">
+        </label>
+
+        <label class="field">
+          <span>Liste à importer ou taper</span>
+          <textarea id="markersInput" rows="12" spellcheck="true"></textarea>
+        </label>
+
+        <div class="format-hint">
+          <strong>Formats acceptés</strong>
+          <span>Juin 1945 : Création de l'ONU</span>
+          <span>6 juin 1944 ; Débarquement de Normandie</span>
+          <span>1914-1918 | Première Guerre mondiale</span>
+          <span>1944 ; Droit de vote des femmes ; citoyenneté, suffrage</span>
+          <span>2002 ; Mise en circulation de l'euro ; monnaie, Union européenne ; URL Wikimedia</span>
+        </div>
+
+        <div class="step-one-actions">
+          <label class="file-picker">
+            <input id="fileInput" type="file" accept=".txt,.csv,.json,text/plain,text/csv,application/json">
+            <span>Importer fichier</span>
+          </label>
+          <button id="pasteCleanButton" type="button">Nettoyer la liste</button>
+          <button id="wikimediaButton" type="button">Ajouter image</button>
+          <button id="removeWikimediaButton" type="button">Enlever images</button>
+        </div>
+        <p class="image-note">Les images sont recherchées automatiquement dans la banque Wikimedia Commons.</p>
+      </section>
+
+      <section class="panel settings-panel" aria-labelledby="settingsTitle">
+        <div class="panel-head">
+          <div>
+            <h2 class="step-title" id="settingsTitle"><img class="step-number" src="assets/steps/step-2.svg" alt="Étape 2"><span>Je personnalise ma frise</span></h2>
+          </div>
+        </div>
+
+        <div class="segmented" role="group" aria-label="Type de frise">
+          <button class="is-active" type="button" data-mode="complete">Complète</button>
+          <button type="button" data-mode="blank">Vierge</button>
+        </div>
+
+        <div class="check-grid">
+          <label><input id="hideDates" type="checkbox"> Masquer les dates</label>
+          <label><input id="hideTitles" type="checkbox"> Masquer les intitulés</label>
+          <label><input id="hideKeywords" type="checkbox"> Masquer les mots-clés</label>
+          <label><input id="hideImages" type="checkbox"> Masquer les images</label>
+        </div>
+
+        <div class="field">
+          <span>Orientation</span>
+          <div class="segmented segmented--orientation" id="orientationOptions" role="group" aria-label="Orientation">
+            <button class="is-active" type="button" data-orientation-choice="landscape" aria-pressed="true">Paysage</button>
+            <button type="button" data-orientation-choice="portrait" aria-pressed="false">Portrait</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <span>Densité</span>
+          <div class="segmented segmented--density" role="group" aria-label="Densité de la frise">
+            <button type="button" data-density="0">Aérée</button>
+            <button class="is-active" type="button" data-density="1">Standard</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <span>Taille des dates sur l’axe</span>
+          <div class="segmented segmented--axis-date-size" role="group" aria-label="Taille des dates sur l’axe">
+            <button class="is-active" type="button" data-axis-date-size="15" aria-pressed="true">Petite</button>
+            <button type="button" data-axis-date-size="19" aria-pressed="false">Moyenne</button>
+            <button type="button" data-axis-date-size="24" aria-pressed="false">Grande</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <span>Palette de la frise</span>
+          <div class="palette-options" role="group" aria-label="Palette de couleurs">
+            <button class="palette-button is-active" type="button" data-palette="mono" aria-pressed="true">
+              <span class="palette-swatches" aria-hidden="true"><i style="--swatch:#222222"></i><i style="--swatch:#666666"></i><i style="--swatch:#ffffff"></i><i style="--swatch:#dddddd"></i></span>
+              <span>Noir et blanc</span>
+            </button>
+            <button class="palette-button" type="button" data-palette="ocean" aria-pressed="false">
+              <span class="palette-swatches" aria-hidden="true"><i style="--swatch:#780000"></i><i style="--swatch:#c1121f"></i><i style="--swatch:#fdf0d5"></i><i style="--swatch:#003049"></i><i style="--swatch:#669bbc"></i></span>
+              <span>Palette 1</span>
+            </button>
+            <button class="palette-button" type="button" data-palette="heritage" aria-pressed="false">
+              <span class="palette-swatches" aria-hidden="true"><i style="--swatch:#264653"></i><i style="--swatch:#2a9d8f"></i><i style="--swatch:#e9c46a"></i><i style="--swatch:#f4a261"></i><i style="--swatch:#e76f51"></i></span>
+              <span>Palette 2</span>
+            </button>
+            <button class="palette-button" type="button" data-palette="forest" aria-pressed="false">
+              <span class="palette-swatches" aria-hidden="true"><i style="--swatch:#f9dbbd"></i><i style="--swatch:#ffa5ab"></i><i style="--swatch:#da627d"></i><i style="--swatch:#a53860"></i><i style="--swatch:#450920"></i></span>
+              <span>Palette 3</span>
+            </button>
+            <button class="palette-button" type="button" data-palette="garnet" aria-pressed="false">
+              <span class="palette-swatches" aria-hidden="true"><i style="--swatch:#006d77"></i><i style="--swatch:#83c5be"></i><i style="--swatch:#edf6f9"></i><i style="--swatch:#ffddd2"></i><i style="--swatch:#e29578"></i></span>
+              <span>Palette 4</span>
+            </button>
+            <button class="palette-button" type="button" data-palette="sage" aria-pressed="false">
+              <span class="palette-swatches" aria-hidden="true"><i style="--swatch:#cad2c5"></i><i style="--swatch:#84a98c"></i><i style="--swatch:#52796f"></i><i style="--swatch:#354f52"></i><i style="--swatch:#2f3e46"></i></span>
+              <span>Palette 5</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="status-box image-status" id="wikimediaStatus" aria-live="polite"></div>
+
+      </section>
+
+      <section class="preview-shell" aria-labelledby="previewTitle">
+        <div class="preview-toolbar">
+          <div>
+            <h2 class="step-title" id="previewTitle"><img class="step-number" src="assets/steps/step-3.svg" alt="Étape 3"><span>Je découvre ma frise</span></h2>
+            <p class="preview-help">Déplacez les boîtes pour ajuster leur position et modifiez les périodes directement sur l’axe du temps.</p>
+          </div>
+          <div class="preview-actions">
+            <button id="resetLayout" type="button">Réinitialiser les positions</button>
+            <p id="markerCount"></p>
+          </div>
+        </div>
+        <div class="sheet" id="sheet">
+          <div class="preview-grid" id="timelinePreview"></div>
+        </div>
+        <div class="download-panel" aria-labelledby="downloadTitle">
+          <div class="download-panel-head">
+            <div>
+              <h2 class="step-title" id="downloadTitle"><img class="step-number" src="assets/steps/step-4.svg" alt="Étape 4"><span>J'exporte ma frise</span></h2>
+            </div>
+          </div>
+          <div class="export-versions">
+            <div class="export-row">
+              <strong>Ma frise complète</strong>
+              <div class="export-actions" aria-label="Formats de la frise complète">
+                <button type="button" data-export-variant="teacher" data-export-format="svg">SVG</button>
+                <button type="button" data-export-variant="teacher" data-export-format="png">PNG</button>
+                <button type="button" data-export-variant="teacher" data-export-format="jpeg">JPG</button>
+                <button type="button" data-export-variant="teacher" data-export-format="pdf">PDF</button>
+                <button type="button" data-export-variant="teacher" data-export-format="json">JSON</button>
+              </div>
+            </div>
+            <div class="export-row">
+              <strong>Ma frise élève</strong>
+              <div class="export-actions" aria-label="Formats de la frise élève">
+                <button type="button" data-export-variant="student" data-export-format="svg">SVG</button>
+                <button type="button" data-export-variant="student" data-export-format="png">PNG</button>
+                <button type="button" data-export-variant="student" data-export-format="jpeg">JPG</button>
+                <button type="button" data-export-variant="student" data-export-format="pdf">PDF</button>
+                <button type="button" data-export-variant="student" data-export-format="json">JSON</button>
+              </div>
+            </div>
+          </div>
+          <div class="status-box" id="statusBox" aria-live="polite"></div>
+        </div>
+      </section>
+    </main>
+
+    <div class="about-overlay" id="aboutOverlay" hidden>
+      <section class="about-dialog" id="aboutDialog" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
+        <div class="about-head">
+          <h2 id="aboutTitle">À propos</h2>
+          <button class="about-close" id="aboutClose" type="button" aria-label="Fermer" title="Fermer">×</button>
+        </div>
+        <div class="about-content">
+          <p class="about-lead">Conçu par Alexandre Balet</p>
+          <p>Enseignant et formateur Histoire-Géographie, Bangkok, AEFE</p>
+          <p>Développée avec l’assistance de Codex et de ChatGPT 5.5</p>
+          <p>Contact : <a href="mailto:alexandre.balet@aefe.fr"><strong>alexandre.balet@aefe.fr</strong></a></p>
+          <p>Dernière mise à jour : 11 septembre 2026</p>
+        </div>
+      </section>
+    </div>
+
+    <footer class="site-footer">
+      <p>
+        Créé par <a href="https://th.linkedin.com/in/alexandre-balet" target="_blank" rel="noopener"><strong>Alexandre Balet</strong></a>
+        pour <a href="http://www.laclassedhistoire.fr/" target="_blank" rel="noopener"><strong>La Classe d'Histoire</strong></a>
+        · 2026 · Ce travail est placé sous licence
+        <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.fr" target="_blank" rel="noopener"><strong>Creative Commons CC BY-SA</strong></a>.
+      </p>
+      <a class="license-icons" href="https://creativecommons.org/licenses/by-sa/4.0/deed.fr" target="_blank" rel="noopener" aria-label="Consulter la licence Creative Commons CC BY-SA">
+        <span class="license-icon">CC</span>
+        <span class="license-icon">BY</span>
+        <span class="license-icon">SA</span>
+      </a>
+    </footer>
+  </body>
+</html>
