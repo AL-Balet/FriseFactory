@@ -41,9 +41,10 @@ const translations = {
     orientation: "Orientation", landscape: "Paysage", portrait: "Portrait", density: "Densité", airy: "Aérée", standard: "Standard",
     axisDateSize: "Taille des dates sur l’axe", small: "Petite", medium: "Moyenne", large: "Grande",
     palette: "Palette de la frise", monochrome: "Noir et blanc", paletteName: "Palette {{number}}",
-    previewHelp: "Déplacez les boîtes pour ajuster leur position et modifiez les périodes directement sur l’axe du temps.",
+    previewHelp: "Déplacez les boîtes et les points pour ajuster leur position, puis modifiez les périodes directement sur l’axe du temps.",
     resetPositions: "Réinitialiser les positions", markerSingular: "repère", markerPlural: "repères",
     teacherTimeline: "Frise repère", studentTimeline: "Frise à compléter",
+    openFullscreen: "Plein écran", closeFullscreen: "Quitter le plein écran",
     completeExport: "Ma frise complète", studentExport: "Ma frise élève",
     completeFormats: "Formats de la frise complète", studentFormats: "Formats de la frise élève",
     ready: "Frise prête. Choisissez maintenant votre format d'export.",
@@ -51,6 +52,7 @@ const translations = {
     defaultTimelineTitle: "Frise chronologique", defaultMarker: "Repère",
     creatorCredit: "Frise réalisée avec Frise Factory, La Classe d'Histoire.", commonsCredit: "Images issues de Wikimedia Commons.",
     moveCard: "Déplacer {{title}}", resizeStart: "Modifier le début de {{title}}", resizeEnd: "Modifier la fin de {{title}}",
+    movePoint: "Déplacer le point de {{title}}", pointAdjusted: "Point ajusté. Sa position est conservée dans les aperçus et les exports.",
     periodAdjusted: "Période ajustée. Sa longueur est conservée à l’impression et dans le SVG.",
     layoutSaved: "Mise en page enregistrée. La frise imprimée et le SVG gardent ces dimensions.",
     addMarkersFirst: "Ajoutez des repères avant de chercher des images Wikimedia.", searchingImages: "Recherche d'images significatives sur Wikimedia Commons...",
@@ -85,9 +87,10 @@ const translations = {
     orientation: "Orientation", landscape: "Landscape", portrait: "Portrait", density: "Density", airy: "Spacious", standard: "Standard",
     axisDateSize: "Date size on the axis", small: "Small", medium: "Medium", large: "Large",
     palette: "Timeline palette", monochrome: "Black and white", paletteName: "Palette {{number}}",
-    previewHelp: "Move the boxes to adjust their position and edit periods directly on the time axis.",
+    previewHelp: "Move boxes and points to adjust their position, then edit periods directly on the time axis.",
     resetPositions: "Reset positions", markerSingular: "milestone", markerPlural: "milestones",
     teacherTimeline: "Reference timeline", studentTimeline: "Timeline to complete",
+    openFullscreen: "Full screen", closeFullscreen: "Exit full screen",
     completeExport: "My complete timeline", studentExport: "My student timeline",
     completeFormats: "Complete timeline formats", studentFormats: "Student timeline formats",
     ready: "Your timeline is ready. Choose an export format.",
@@ -95,6 +98,7 @@ const translations = {
     defaultTimelineTitle: "Timeline", defaultMarker: "Milestone",
     creatorCredit: "Timeline created with Frise Factory, La Classe d'Histoire.", commonsCredit: "Images from Wikimedia Commons.",
     moveCard: "Move {{title}}", resizeStart: "Edit the start of {{title}}", resizeEnd: "Edit the end of {{title}}",
+    movePoint: "Move the point for {{title}}", pointAdjusted: "Point adjusted. Its position is preserved in previews and exports.",
     periodAdjusted: "Period adjusted. Its length is preserved in print and SVG exports.",
     layoutSaved: "Layout saved. Printed and SVG timelines retain these dimensions.",
     addMarkersFirst: "Add milestones before searching for Wikimedia images.", searchingImages: "Searching Wikimedia Commons for meaningful images...",
@@ -197,6 +201,7 @@ let visibilitySettings = {
 };
 let layoutOverrides = {};
 let activeInteraction = null;
+let timelineFullscreenActive = false;
 
 function init() {
   loadState();
@@ -314,6 +319,8 @@ function bindEvents() {
   });
   els.wikimediaButton.addEventListener("click", addWikimediaImages);
   els.removeWikimediaButton.addEventListener("click", removeWikimediaImages);
+  document.addEventListener("fullscreenchange", syncFullscreenButton);
+  document.addEventListener("webkitfullscreenchange", syncFullscreenButton);
   els.fileInput.addEventListener("change", importFile);
   els.exportButtons.forEach((button) => {
     button.addEventListener("click", () => exportTimeline(button.dataset.exportVariant, button.dataset.exportFormat));
@@ -677,6 +684,9 @@ function render() {
     <article class="preview-pane preview-pane--teacher">
       <div class="preview-pane-head">
         <h3>${escapeXml(tr("teacherTimeline"))}</h3>
+        <button class="preview-fullscreen-button" type="button" data-preview-fullscreen aria-label="${escapeXml(tr("openFullscreen"))}" title="${escapeXml(tr("openFullscreen"))}">
+          ${fullscreenIcon(false)}<span>${escapeXml(tr("openFullscreen"))}</span>
+        </button>
       </div>
       ${buildTimelineSvg(markers, { variant: "teacher", draggable: true })}
     </article>
@@ -687,6 +697,89 @@ function render() {
       ${buildTimelineSvg(markers, { variant: "student", draggable: false })}
     </article>`;
   bindTimelineDrag();
+  bindFullscreenPreview();
+}
+
+function fullscreenIcon(isActive) {
+  const path = isActive
+    ? '<path d="M9 3v6H3M15 3v6h6M9 21v-6H3M15 21v-6h6"/>'
+    : '<path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/>';
+  return `<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
+}
+
+function bindFullscreenPreview() {
+  const button = els.preview.querySelector("[data-preview-fullscreen]");
+  if (button) button.addEventListener("click", toggleTeacherFullscreen);
+  syncFullscreenButton();
+}
+
+async function toggleTeacherFullscreen(event) {
+  const pane = event.currentTarget.closest(".preview-pane--teacher");
+  if (!pane) return;
+
+  if (pane.classList.contains("is-fullscreen-fallback")) {
+    pane.classList.remove("is-fullscreen-fallback");
+    document.body.classList.remove("timeline-fullscreen-fallback");
+    syncFullscreenButton();
+    return;
+  }
+
+  if (isElementFullscreen(pane)) {
+    if (document.exitFullscreen) await document.exitFullscreen();
+    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    return;
+  }
+
+  try {
+    if (pane.requestFullscreen) await pane.requestFullscreen();
+    else if (pane.webkitRequestFullscreen) pane.webkitRequestFullscreen();
+    if (!isElementFullscreen(pane)) enterFullscreenFallback(pane);
+  } catch {
+    enterFullscreenFallback(pane);
+  }
+}
+
+function enterFullscreenFallback(pane) {
+  pane.classList.add("is-fullscreen-fallback");
+  document.body.classList.add("timeline-fullscreen-fallback");
+  syncFullscreenButton();
+}
+
+function syncFullscreenButton() {
+  const button = els.preview.querySelector("[data-preview-fullscreen]");
+  if (!button) {
+    timelineFullscreenActive = false;
+    return;
+  }
+  const pane = button.closest(".preview-pane--teacher");
+  const isActive = isElementFullscreen(pane);
+  if (timelineFullscreenActive && !isActive) {
+    timelineFullscreenActive = false;
+    render();
+    return;
+  }
+  timelineFullscreenActive = isActive;
+  const label = tr(isActive ? "closeFullscreen" : "openFullscreen");
+  button.innerHTML = `${fullscreenIcon(isActive)}<span>${escapeXml(label)}</span>`;
+  button.setAttribute("aria-label", label);
+  button.setAttribute("title", label);
+  button.setAttribute("aria-pressed", String(isActive));
+}
+
+function isElementFullscreen(element) {
+  if (element.classList.contains("is-fullscreen-fallback")) return true;
+  const fullscreenElement = document.fullscreenElement || document.webkitFullscreenElement;
+  if (fullscreenElement) return fullscreenElement === element;
+  try {
+    return element.matches(":fullscreen") || element.matches(":-webkit-full-screen");
+  } catch {
+    return false;
+  }
+}
+
+function renderAfterTimelineInteraction(svg) {
+  const pane = svg?.closest(".preview-pane--teacher");
+  if (!pane || !isElementFullscreen(pane)) render();
 }
 
 function buildTimelineSvg(markers, options = {}) {
@@ -725,7 +818,9 @@ function buildTimelineSvg(markers, options = {}) {
     const key = markerKey(marker);
     const clipId = imageClipId(marker, index, variant);
     const isDuration = marker.end > marker.start;
-    const periodRange = isDuration ? applyPeriodOverride(positions[index], key, width, margin) : positions[index];
+    const periodRange = isDuration
+      ? applyPeriodOverride(positions[index], key, width, margin)
+      : applyPointOverride(positions[index], key, width, margin);
     const x1 = periodRange.start;
     const x2 = periodRange.end;
     const x = (x1 + x2) / 2;
@@ -760,10 +855,15 @@ function buildTimelineSvg(markers, options = {}) {
           ${draggable ? `<circle class="timeline-period-handle" data-edge="start" cx="${x1}" cy="${axisY}" r="9" fill="${palette.cardFill || "#ffffff"}" stroke="${tone}" stroke-width="3" aria-label="${escapeXml(tr("resizeStart", { title: marker.title }))}"/>
           <circle class="timeline-period-handle" data-edge="end" cx="${x2}" cy="${axisY}" r="9" fill="${palette.cardFill || "#ffffff"}" stroke="${tone}" stroke-width="3" aria-label="${escapeXml(tr("resizeEnd", { title: marker.title }))}"/>` : ""}
         </g>`
-      : `<circle cx="${x}" cy="${axisY}" r="7" fill="${tone}"/>`;
+      : draggable ? "" : `<circle class="timeline-point" data-key="${escapeXml(key)}" cx="${x}" cy="${axisY}" r="7" fill="${tone}"/>`;
+    const pointControl = !isDuration && draggable
+      ? `<circle class="timeline-point" data-key="${escapeXml(key)}" cx="${x}" cy="${axisY}" r="7" fill="${tone}"/>
+        <circle class="timeline-point-handle timeline-point-drag-ring" data-key="${escapeXml(key)}" data-orientation="horizontal" data-min="${margin.left}" data-max="${width - margin.right}" cx="${x}" cy="${axisY}" r="17" fill="transparent" stroke="${tone}" stroke-width="2" aria-label="${escapeXml(tr("movePoint", { title: marker.title }))}"><title>${escapeXml(tr("movePoint", { title: marker.title }))}</title></circle>`
+      : "";
 
     return {
-      underlay: `${periodMark}${connector}`,
+      underlay: `${connector}${periodMark}`,
+      pointControl,
       card: `<g class="timeline-card-node" data-key="${escapeXml(key)}" data-x="${lane.x}" data-y="${cardY}" data-width="${lane.cardWidth}" data-height="${lane.cardHeight}" data-anchor-x="${x}" ${draggable ? `tabindex="0" role="button" aria-label="${escapeXml(tr("moveCard", { title: marker.title }))}"` : `aria-hidden="true"`}>
         <rect x="${lane.x}" y="${cardY}" width="${lane.cardWidth}" height="${lane.cardHeight}" rx="10" fill="${palette.cardFill || "#ffffff"}" stroke="${tone}" stroke-width="2"/>
         ${imageBubble}
@@ -780,7 +880,7 @@ function buildTimelineSvg(markers, options = {}) {
       </g>`
     };
   });
-  const events = `${eventLayers.map((layer) => layer.underlay).join("")}${eventLayers.map((layer) => layer.card).join("")}`;
+  const events = `${eventLayers.map((layer) => layer.underlay).join("")}${eventLayers.map((layer) => layer.pointControl).join("")}${eventLayers.map((layer) => layer.card).join("")}`;
 
   return `
     <svg class="timeline-svg" data-variant="${escapeXml(variant)}" data-orientation="horizontal" viewBox="0 0 ${width} ${height}" role="img" aria-label="${title}${subtitle ? ` - ${subtitle}` : ""}" xmlns="http://www.w3.org/2000/svg">
@@ -834,7 +934,9 @@ function buildVerticalTimelineSvg(markers, options = {}) {
     const key = markerKey(marker);
     const clipId = imageClipId(marker, index, variant);
     const isDuration = marker.end > marker.start;
-    const periodRange = isDuration ? applyVerticalPeriodOverride(positions[index], key, height, margin) : positions[index];
+    const periodRange = isDuration
+      ? applyVerticalPeriodOverride(positions[index], key, height, margin)
+      : applyVerticalPointOverride(positions[index], key, height, margin);
     const y1 = periodRange.start;
     const y2 = periodRange.end;
     const anchorY = (y1 + y2) / 2;
@@ -868,10 +970,15 @@ function buildVerticalTimelineSvg(markers, options = {}) {
           ${draggable ? `<circle class="timeline-period-handle" data-edge="start" cx="${axisX}" cy="${y1}" r="9" fill="${palette.cardFill || "#ffffff"}" stroke="${tone}" stroke-width="3" aria-label="${escapeXml(tr("resizeStart", { title: marker.title }))}"/>
           <circle class="timeline-period-handle" data-edge="end" cx="${axisX}" cy="${y2}" r="9" fill="${palette.cardFill || "#ffffff"}" stroke="${tone}" stroke-width="3" aria-label="${escapeXml(tr("resizeEnd", { title: marker.title }))}"/>` : ""}
         </g>`
-      : `<circle cx="${axisX}" cy="${anchorY}" r="7" fill="${tone}"/>`;
+      : draggable ? "" : `<circle class="timeline-point" data-key="${escapeXml(key)}" cx="${axisX}" cy="${anchorY}" r="7" fill="${tone}"/>`;
+    const pointControl = !isDuration && draggable
+      ? `<circle class="timeline-point" data-key="${escapeXml(key)}" cx="${axisX}" cy="${anchorY}" r="7" fill="${tone}"/>
+        <circle class="timeline-point-handle timeline-point-drag-ring" data-key="${escapeXml(key)}" data-orientation="vertical" data-min="${margin.top}" data-max="${height - margin.bottom}" cx="${axisX}" cy="${anchorY}" r="17" fill="transparent" stroke="${tone}" stroke-width="2" aria-label="${escapeXml(tr("movePoint", { title: marker.title }))}"><title>${escapeXml(tr("movePoint", { title: marker.title }))}</title></circle>`
+      : "";
 
     return {
-      underlay: `${periodMark}${connector}`,
+      underlay: `${connector}${periodMark}`,
+      pointControl,
       card: `<g class="timeline-card-node" data-key="${escapeXml(key)}" data-x="${lane.x}" data-y="${cardY}" data-width="${lane.cardWidth}" data-height="${lane.cardHeight}" data-anchor-y="${anchorY}" ${draggable ? `tabindex="0" role="button" aria-label="${escapeXml(tr("moveCard", { title: marker.title }))}"` : `aria-hidden="true"`}>
         <rect x="${lane.x}" y="${cardY}" width="${lane.cardWidth}" height="${lane.cardHeight}" rx="10" fill="${palette.cardFill || "#ffffff"}" stroke="${tone}" stroke-width="2"/>
         ${imageBubble}
@@ -888,7 +995,7 @@ function buildVerticalTimelineSvg(markers, options = {}) {
       </g>`
     };
   });
-  const events = `${eventLayers.map((layer) => layer.underlay).join("")}${eventLayers.map((layer) => layer.card).join("")}`;
+  const events = `${eventLayers.map((layer) => layer.underlay).join("")}${eventLayers.map((layer) => layer.pointControl).join("")}${eventLayers.map((layer) => layer.card).join("")}`;
 
   return `
     <svg class="timeline-svg timeline-svg--vertical" data-variant="${escapeXml(variant)}" data-orientation="vertical" viewBox="0 0 ${width} ${height}" role="img" aria-label="${title}${subtitle ? ` - ${subtitle}` : ""}" xmlns="http://www.w3.org/2000/svg">
@@ -952,6 +1059,13 @@ function applyPeriodOverride(position, key, width, margin) {
   };
 }
 
+function applyPointOverride(position, key, width, margin) {
+  const saved = Number(layoutOverrides[key]?.pointX);
+  const x = Number.isFinite(saved) ? saved : position.start;
+  const coordinate = clamp(x, margin.left, width - margin.right);
+  return { start: coordinate, end: coordinate };
+}
+
 function applyVerticalPeriodOverride(position, key, height, margin) {
   const saved = layoutOverrides[key] || {};
   const savedStart = Number(saved.periodStartY);
@@ -964,6 +1078,13 @@ function applyVerticalPeriodOverride(position, key, height, margin) {
   };
 }
 
+function applyVerticalPointOverride(position, key, height, margin) {
+  const saved = Number(layoutOverrides[key]?.pointY);
+  const y = Number.isFinite(saved) ? saved : position.start;
+  const coordinate = clamp(y, margin.top, height - margin.bottom);
+  return { start: coordinate, end: coordinate };
+}
+
 function bindTimelineDrag() {
   els.preview.querySelectorAll('svg.timeline-svg[data-variant="teacher"]').forEach((svg) => {
     svg.addEventListener("pointerdown", startTimelineDrag);
@@ -972,6 +1093,11 @@ function bindTimelineDrag() {
 }
 
 function startTimelineDrag(event) {
+  const pointHandle = event.target.closest(".timeline-point-handle");
+  if (pointHandle) {
+    startTimelinePointMove(event, pointHandle);
+    return;
+  }
   const periodHandle = event.target.closest(".timeline-period-handle");
   if (periodHandle) {
     startTimelinePeriodResize(event, periodHandle);
@@ -1001,6 +1127,61 @@ function startTimelineDrag(event) {
   card.addEventListener("pointermove", moveTimelineCard);
   card.addEventListener("pointerup", stopTimelineDrag);
   card.addEventListener("pointercancel", stopTimelineDrag);
+}
+
+function startTimelinePointMove(event, point) {
+  event.preventDefault();
+  const svg = point.ownerSVGElement;
+  activeInteraction = {
+    mode: "point",
+    svg,
+    point,
+    key: point.dataset.key,
+    isVertical: point.dataset.orientation === "vertical",
+    minCoord: Number(point.dataset.min),
+    maxCoord: Number(point.dataset.max)
+  };
+  point.classList.add("is-moving");
+  point.setPointerCapture(event.pointerId);
+  point.addEventListener("pointermove", moveTimelinePoint);
+  point.addEventListener("pointerup", stopTimelinePointMove);
+  point.addEventListener("pointercancel", stopTimelinePointMove);
+}
+
+function moveTimelinePoint(event) {
+  if (!activeInteraction || activeInteraction.mode !== "point") return;
+  const pointer = getSvgPointer(activeInteraction.svg, event);
+  const coordinate = clamp(
+    activeInteraction.isVertical ? pointer.y : pointer.x,
+    activeInteraction.minCoord,
+    activeInteraction.maxCoord
+  );
+  setTimelinePointPosition(
+    activeInteraction.svg,
+    activeInteraction.point,
+    activeInteraction.key,
+    coordinate,
+    activeInteraction.isVertical
+  );
+}
+
+function stopTimelinePointMove(event) {
+  if (!activeInteraction || activeInteraction.mode !== "point") return;
+  const { point, key, isVertical } = activeInteraction;
+  point.classList.remove("is-moving");
+  point.releasePointerCapture(event.pointerId);
+  point.removeEventListener("pointermove", moveTimelinePoint);
+  point.removeEventListener("pointerup", stopTimelinePointMove);
+  point.removeEventListener("pointercancel", stopTimelinePointMove);
+  const coordinate = Number(point.getAttribute(isVertical ? "cy" : "cx"));
+  layoutOverrides[key] = {
+    ...(layoutOverrides[key] || {}),
+    [isVertical ? "pointY" : "pointX"]: Math.round(coordinate)
+  };
+  activeInteraction = null;
+  saveState();
+  renderAfterTimelineInteraction(point.ownerSVGElement);
+  els.status.textContent = tr("pointAdjusted");
 }
 
 function startTimelinePeriodResize(event, handle) {
@@ -1056,7 +1237,7 @@ function stopTimelinePeriodResize(event) {
   layoutOverrides[key] = { ...(layoutOverrides[key] || {}), ...periodOverride };
   activeInteraction = null;
   saveState();
-  render();
+  renderAfterTimelineInteraction(period.ownerSVGElement);
   els.status.textContent = tr("periodAdjusted");
 }
 
@@ -1091,7 +1272,7 @@ function stopTimelineDrag(event) {
   saveCardLayoutOverride(key, card, svg.dataset.orientation === "vertical");
   activeInteraction = null;
   saveState();
-  render();
+  renderAfterTimelineInteraction(svg);
   els.status.textContent = tr("layoutSaved");
 }
 
@@ -1215,6 +1396,41 @@ function updateConnector(svg, key, x, y, width, height) {
   connector.setAttribute("y1", axisY);
   connector.setAttribute("x2", edge.x);
   connector.setAttribute("y2", edge.y);
+}
+
+function setTimelinePointPosition(svg, point, key, coordinate, isVertical) {
+  const connector = svg.querySelector(`.marker-connector[data-key="${cssEscape(key)}"]`);
+  const card = svg.querySelector(`.timeline-card-node[data-key="${cssEscape(key)}"]`);
+  const visiblePoint = svg.querySelector(`.timeline-point[data-key="${cssEscape(key)}"]`);
+
+  if (isVertical) {
+    point.setAttribute("cy", coordinate);
+    if (visiblePoint) visiblePoint.setAttribute("cy", coordinate);
+    if (connector) {
+      connector.dataset.anchorY = String(coordinate);
+      connector.setAttribute("y1", coordinate);
+    }
+    if (card) card.dataset.anchorY = String(coordinate);
+  } else {
+    point.setAttribute("cx", coordinate);
+    if (visiblePoint) visiblePoint.setAttribute("cx", coordinate);
+    if (connector) {
+      connector.dataset.anchorX = String(coordinate);
+      connector.setAttribute("x1", coordinate);
+    }
+    if (card) card.dataset.anchorX = String(coordinate);
+  }
+
+  if (card && connector) {
+    updateConnector(
+      svg,
+      key,
+      Number(card.dataset.x),
+      Number(card.dataset.y),
+      Number(card.dataset.width),
+      Number(card.dataset.height)
+    );
+  }
 }
 
 function getRectangleEdgePoint(anchorX, anchorY, x, y, width, height) {
@@ -1861,7 +2077,7 @@ function setExportButtonsDisabled(disabled) {
 function prepareSvgForExport(svg) {
   const clone = svg.cloneNode(true);
   const [, , width, height] = clone.getAttribute("viewBox").split(/\s+/).map(Number);
-  clone.querySelectorAll(".timeline-resize-handle, .timeline-period-handle").forEach((node) => node.remove());
+  clone.querySelectorAll(".timeline-resize-handle, .timeline-period-handle, .timeline-point-drag-ring").forEach((node) => node.remove());
   clone.querySelectorAll(".timeline-card-node").forEach((node) => {
     node.removeAttribute("tabindex");
     node.removeAttribute("role");

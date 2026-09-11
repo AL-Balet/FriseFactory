@@ -168,7 +168,8 @@ h2 {
   font-size: 0.94rem;
   font-weight: 600;
   margin: 8px 0 0 53px;
-  max-width: 720px;
+  max-width: none;
+  white-space: nowrap;
 }
 
 .subtitle {
@@ -613,6 +614,60 @@ body.dark .download-success-icon {
   margin: 0;
 }
 
+.preview-fullscreen-button {
+  align-items: center;
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 11px;
+}
+
+.button-icon {
+  display: block;
+  height: 18px;
+  width: 18px;
+}
+
+.preview-pane--teacher:fullscreen,
+.preview-pane--teacher:-webkit-full-screen,
+.preview-pane--teacher.is-fullscreen-fallback {
+  background: var(--paper);
+  color: #26343b;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: auto;
+  padding: 20px;
+}
+
+.preview-pane--teacher.is-fullscreen-fallback {
+  height: 100vh;
+  inset: 0;
+  position: fixed;
+  width: 100vw;
+  z-index: 1000;
+}
+
+body.timeline-fullscreen-fallback {
+  overflow: hidden;
+}
+
+.preview-pane--teacher:fullscreen .preview-pane-head,
+.preview-pane--teacher:-webkit-full-screen .preview-pane-head,
+.preview-pane--teacher.is-fullscreen-fallback .preview-pane-head {
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.preview-pane--teacher:fullscreen .timeline-svg--vertical,
+.preview-pane--teacher:-webkit-full-screen .timeline-svg--vertical,
+.preview-pane--teacher.is-fullscreen-fallback .timeline-svg--vertical {
+  height: calc(100vh - 92px);
+  margin: 0 auto;
+  width: auto;
+}
+
 body.dark .sheet {
   color: var(--text);
 }
@@ -675,6 +730,34 @@ body.dark .sheet {
 .timeline-period-handle {
   cursor: ew-resize;
   touch-action: none;
+}
+
+.marker-connector,
+.timeline-period-bar {
+  pointer-events: none;
+}
+
+.timeline-point-handle {
+  cursor: ew-resize;
+  pointer-events: all;
+  touch-action: none;
+}
+
+.timeline-point-drag-ring {
+  opacity: 0.48;
+  transition: fill 140ms ease, opacity 140ms ease, stroke-width 140ms ease;
+}
+
+.timeline-svg--vertical .timeline-point-handle {
+  cursor: ns-resize;
+}
+
+.timeline-point-handle:hover,
+.timeline-point-handle.is-moving {
+  fill: rgba(255, 255, 255, 0.72);
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.28));
+  opacity: 1;
+  stroke-width: 3px;
 }
 
 .timeline-period--vertical .timeline-period-handle {
@@ -836,6 +919,10 @@ body.dark .sheet {
 }
 
 @media (max-width: 900px) {
+  .preview-help {
+    white-space: normal;
+  }
+
   .app-header,
   .workspace {
     grid-template-columns: 1fr;
