@@ -1,4 +1,4 @@
-*Frise Factory** est une application web gratuite destinée à la création de frises chronologiques pédagogiques. Elle permet de transformer rapidement une liste de repères historiques en une frise claire, personnalisable et prête à être imprimée ou distribuée aux élèves.
+Frise Factory est une application web gratuite destinée à la création de frises chronologiques pédagogiques. Elle permet de transformer rapidement une liste de repères historiques en une frise claire, personnalisable et prête à être imprimée ou distribuée aux élèves.
 
 L'application a été conçue par **Alexandre Balet**, enseignant et formateur en Histoire-Géographie à Bangkok (AEFE), pour **La Classe d'Histoire**.
 
