@@ -1,6 +1,20 @@
 const STORAGE_KEY = "timeline-builder-state";
 const LANGUAGE_KEY = "frise-factory-language";
 const FULL_LABEL_VISIBILITY = { dates: true, titles: true, keywords: true, images: true };
+const MONTH_ALIASES = [
+  ["janvier", "janv", "january", "jan"],
+  ["fevrier", "fevr", "february", "feb"],
+  ["mars", "march", "mar"],
+  ["avril", "april", "apr"],
+  ["mai", "may"],
+  ["juin", "june", "jun"],
+  ["juillet", "july", "jul"],
+  ["aout", "august", "aug"],
+  ["septembre", "sept", "september", "sep"],
+  ["octobre", "october", "oct"],
+  ["novembre", "november", "nov"],
+  ["decembre", "december", "dec"]
+];
 
 const sampleMarkers = `1870 ; Proclamation de la IIIe République ; République, nouveau régime
 Printemps 1871 ; Insurrection de la Commune de Paris ; insurrection, Paris
@@ -29,15 +43,17 @@ const translations = {
     steps: ["Je choisis mes repères", "Je personnalise ma frise", "Je découvre ma frise", "J'exporte ma frise"],
     sample: "Exemple", clear: "Vider", titleLabel: "Titre de la frise", subtitleLabel: "Sous-titre de la frise",
     subtitlePlaceholder: "Facultatif", listLabel: "Liste à importer ou taper", formatsAccepted: "Formats acceptés",
+    markerContentNote: "Vous pouvez intégrer à votre frise une date ou une période, le nom de l’événement, des mots-clés et une image.",
     formatExamples: [
       "Juin 1945 : Création de l'ONU", "6 juin 1944 ; Débarquement de Normandie",
       "1914-1918 | Première Guerre mondiale",
+      "XIe-XIIIe siècles ; Essor des villes médiévales",
       "1944 ; Droit de vote des femmes ; citoyenneté, suffrage",
       "2002 ; Mise en circulation de l'euro ; monnaie, Union européenne ; URL Wikimedia"
     ],
     importFile: "Importer fichier", cleanList: "Nettoyer la liste", addImage: "Ajouter image", removeImages: "Enlever images",
     imageNote: "Les images sont recherchées automatiquement dans la banque Wikimedia Commons.",
-    timelineType: "Type de frise", complete: "Complète", blank: "Vierge", hideDates: "Masquer les dates", hideTitles: "Masquer les intitulés", hideKeywords: "Masquer les mots-clés", hideImages: "Masquer les images",
+    timelineType: "Type de frise", complete: "Complète", blank: "Vierge", hideDates: "Masquer les dates", hideAxisDates: "Masquer les dates de l’axe", hideTitles: "Masquer les intitulés", hideKeywords: "Masquer les mots-clés", hideImages: "Masquer les images",
     orientation: "Orientation", landscape: "Paysage", portrait: "Portrait", density: "Densité", airy: "Aérée", standard: "Standard",
     axisDateSize: "Taille des dates sur l’axe", small: "Petite", medium: "Moyenne", large: "Grande",
     palette: "Palette de la frise", monochrome: "Noir et blanc", paletteName: "Palette {{number}}",
@@ -75,15 +91,17 @@ const translations = {
     steps: ["I choose my milestones", "I customise my timeline", "I review my timeline", "I export my timeline"],
     sample: "Example", clear: "Clear", titleLabel: "Timeline title", subtitleLabel: "Timeline subtitle",
     subtitlePlaceholder: "Optional", listLabel: "Import or type a list", formatsAccepted: "Accepted formats",
+    markerContentNote: "You can include a date or period, an event name, keywords and an image in your timeline.",
     formatExamples: [
       "June 1945 : Creation of the United Nations", "6 June 1944 ; Normandy landings",
       "1914-1918 | First World War",
+      "11th-13th centuries ; Growth of medieval towns",
       "1944 ; Women's right to vote ; citizenship, suffrage",
       "2002 ; Introduction of euro banknotes and coins ; currency, European Union ; Wikimedia URL"
     ],
     importFile: "Import file", cleanList: "Clean list", addImage: "Add image", removeImages: "Remove images",
     imageNote: "Images are found automatically in the Wikimedia Commons collection.",
-    timelineType: "Timeline type", complete: "Complete", blank: "Blank", hideDates: "Hide dates", hideTitles: "Hide labels", hideKeywords: "Hide keywords", hideImages: "Hide images",
+    timelineType: "Timeline type", complete: "Complete", blank: "Blank", hideDates: "Hide dates", hideAxisDates: "Hide axis dates", hideTitles: "Hide labels", hideKeywords: "Hide keywords", hideImages: "Hide images",
     orientation: "Orientation", landscape: "Landscape", portrait: "Portrait", density: "Density", airy: "Spacious", standard: "Standard",
     axisDateSize: "Date size on the axis", small: "Small", medium: "Medium", large: "Large",
     palette: "Timeline palette", monochrome: "Black and white", paletteName: "Palette {{number}}",
@@ -128,31 +146,36 @@ const TIMELINE_PALETTES = {
     ink: "#003049",
     muted: "#669bbc",
     cardFill: "#fdf0d5",
-    events: ["#780000", "#c1121f", "#003049", "#669bbc"]
+    periodFill: "#669bbc",
+    events: ["#780000", "#003049"]
   },
   heritage: {
     ink: "#264653",
     muted: "#2a9d8f",
     cardFill: "#e9c46a",
-    events: ["#264653", "#2a9d8f", "#f4a261", "#e76f51"]
+    periodFill: "#f4a261",
+    events: ["#264653", "#e76f51"]
   },
   forest: {
     ink: "#450920",
     muted: "#a53860",
     cardFill: "#f9dbbd",
-    events: ["#ffa5ab", "#da627d", "#a53860", "#450920"]
+    periodFill: "#ffa5ab",
+    events: ["#da627d", "#450920"]
   },
   garnet: {
     ink: "#006d77",
     muted: "#83c5be",
     cardFill: "#edf6f9",
-    events: ["#006d77", "#83c5be", "#ffddd2", "#e29578"]
+    periodFill: "#ffddd2",
+    events: ["#006d77", "#e29578"]
   },
   sage: {
     ink: "#2f3e46",
     muted: "#52796f",
     cardFill: "#cad2c5",
-    events: ["#2f3e46", "#354f52", "#52796f", "#84a98c"]
+    periodFill: "#84a98c",
+    events: ["#2f3e46", "#52796f"]
   }
 };
 
@@ -173,6 +196,7 @@ const els = {
   removeWikimediaButton: document.querySelector("#removeWikimediaButton"),
   modeButtons: document.querySelectorAll("[data-mode]"),
   hideDates: document.querySelector("#hideDates"),
+  hideAxisDates: document.querySelector("#hideAxisDates"),
   hideTitles: document.querySelector("#hideTitles"),
   hideKeywords: document.querySelector("#hideKeywords"),
   hideImages: document.querySelector("#hideImages"),
@@ -196,8 +220,8 @@ let currentDensity = "1";
 let currentAxisDateSize = 15;
 let currentPalette = "mono";
 let visibilitySettings = {
-  complete: { hideDates: false, hideTitles: false, hideKeywords: false, hideImages: false },
-  blank: { hideDates: true, hideTitles: true, hideKeywords: true, hideImages: false }
+  complete: { hideDates: false, hideAxisDates: false, hideTitles: false, hideKeywords: false, hideImages: false },
+  blank: { hideDates: true, hideAxisDates: false, hideTitles: true, hideKeywords: true, hideImages: false }
 };
 let layoutOverrides = {};
 let activeInteraction = null;
@@ -224,6 +248,7 @@ function bindEvents() {
   ];
   const checkboxControls = [
     els.hideDates,
+    els.hideAxisDates,
     els.hideTitles,
     els.hideKeywords,
     els.hideImages
@@ -233,6 +258,7 @@ function bindEvents() {
   checkboxControls.forEach((control) => control.addEventListener("change", () => {
     visibilitySettings[currentMode] = {
       hideDates: els.hideDates.checked,
+      hideAxisDates: els.hideAxisDates.checked,
       hideTitles: els.hideTitles.checked,
       hideKeywords: els.hideKeywords.checked,
       hideImages: els.hideImages.checked
@@ -371,6 +397,7 @@ function applyLanguage() {
   els.subtitle.placeholder = tr("subtitlePlaceholder");
   els.input.parentElement.querySelector("span").textContent = tr("listLabel");
   const formatHint = document.querySelector(".format-hint");
+  document.querySelector(".marker-content-note span").textContent = tr("markerContentNote");
   formatHint.querySelector("strong").textContent = tr("formatsAccepted");
   formatHint.querySelectorAll("span").forEach((line, index) => {
     line.textContent = tr("formatExamples")[index];
@@ -385,7 +412,7 @@ function applyLanguage() {
     button.textContent = tr(button.dataset.mode === "complete" ? "complete" : "blank");
   });
   document.querySelector(".settings-panel > .segmented").setAttribute("aria-label", tr("timelineType"));
-  [[els.hideDates, "hideDates"], [els.hideTitles, "hideTitles"], [els.hideKeywords, "hideKeywords"], [els.hideImages, "hideImages"]].forEach(([input, key]) => {
+  [[els.hideDates, "hideDates"], [els.hideAxisDates, "hideAxisDates"], [els.hideTitles, "hideTitles"], [els.hideKeywords, "hideKeywords"], [els.hideImages, "hideImages"]].forEach(([input, key]) => {
     input.parentElement.lastChild.textContent = ` ${tr(key)}`;
   });
   const orientation = document.querySelector(".segmented--orientation");
@@ -464,12 +491,14 @@ function loadState() {
       visibilitySettings = {
         complete: {
           hideDates: Boolean(state.visibilitySettings.complete?.hideDates),
+          hideAxisDates: Boolean(state.visibilitySettings.complete?.hideAxisDates),
           hideTitles: Boolean(state.visibilitySettings.complete?.hideTitles),
           hideKeywords: Boolean(state.visibilitySettings.complete?.hideKeywords),
           hideImages: Boolean(state.visibilitySettings.complete?.hideImages)
         },
         blank: {
           hideDates: state.visibilitySettings.blank?.hideDates !== false,
+          hideAxisDates: Boolean(state.visibilitySettings.blank?.hideAxisDates),
           hideTitles: state.visibilitySettings.blank?.hideTitles !== false,
           hideKeywords: state.visibilitySettings.blank?.hideKeywords !== false,
           hideImages: Boolean(state.visibilitySettings.blank?.hideImages)
@@ -478,6 +507,7 @@ function loadState() {
     } else {
       visibilitySettings[currentMode] = {
         hideDates: Boolean(state.hideDates),
+        hideAxisDates: false,
         hideTitles: Boolean(state.hideTitles),
         hideKeywords: currentMode === "blank",
         hideImages: Boolean(state.hideImages)
@@ -549,6 +579,7 @@ function normalizeAxisDateSize(value) {
 function syncVisibilityControls() {
   const settings = visibilitySettings[currentMode];
   els.hideDates.checked = settings.hideDates;
+  els.hideAxisDates.checked = settings.hideAxisDates;
   els.hideTitles.checked = settings.hideTitles;
   els.hideKeywords.checked = settings.hideKeywords;
   els.hideImages.checked = settings.hideImages;
@@ -591,7 +622,9 @@ function parseMarkerLine(line) {
   const cleaned = line.replace(/\t/g, " ; ").replace(/\s{2,}/g, " ");
   const parts = cleaned.includes(";") || cleaned.includes("|")
     ? cleaned.split(/[;|]/).map((part) => part.trim())
-    : cleaned.split(/\s[:,-]\s/).map((part) => part.trim());
+    : cleaned.includes(":")
+      ? cleaned.split(/\s*:\s*/).map((part) => part.trim())
+      : cleaned.split(/\s[,-]\s/).map((part) => part.trim());
 
   if (parts.length < 2) return null;
   const date = parts.shift();
@@ -607,6 +640,8 @@ function parseMarkerLine(line) {
     date: date.trim(),
     start: range.start,
     end: range.end,
+    startYear: range.startYear,
+    endYear: range.endYear,
     title,
     keywords,
     image
@@ -623,6 +658,8 @@ function normalizeObjectMarker(item) {
     date,
     start: range.start,
     end: range.end,
+    startYear: range.startYear,
+    endYear: range.endYear,
     title: String(item.title || item.titre || item.label || tr("defaultMarker")).trim(),
     keywords: Array.isArray(rawKeywords) ? rawKeywords.join(", ") : String(rawKeywords).trim(),
     image: normalizeWikimediaImage(item.image || item.imageUrl || item.wikimedia || "")
@@ -634,29 +671,113 @@ function parseDateRange(value) {
     .replace(/\bav\.?\s?j\.?-?c\.?/gi, " av. J.-C.")
     .replace(/\bavant\s+jésus-?christ\b/gi, " av. J.-C.")
     .trim();
+  const isBce = /av\.?\s*j/i.test(normalized) || /avant/i.test(normalized) || /\b(?:bc|bce)\b/i.test(normalized);
+  const centuryText = normalized.normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
+  if (/\b(?:siecles?|centur(?:y|ies))\b/i.test(centuryText)) {
+    return parseCenturyRange(centuryText, isBce);
+  }
+  if (/\b(?:millenaires?|millenni(?:um|a|ums))\b/i.test(centuryText)) {
+    return parseCenturyRange(centuryText, isBce, 1000, "(?:millenaires?|millenni(?:um|a|ums))");
+  }
+
+  const datedPeriod = normalized.match(/^(.+?)(?:\s+-\s+|\s*[–—]\s*|\s+(?:au|à|to)\s+)(.+)$/i);
+  if (datedPeriod) {
+    const first = parseDateRange(datedPeriod[1]);
+    const last = parseDateRange(datedPeriod[2]);
+    if (!first || !last) return null;
+    const ordered = [first, last].sort((a, b) => a.start - b.start);
+    return {
+      start: ordered[0].start,
+      end: ordered[1].end,
+      startYear: ordered[0].startYear,
+      endYear: ordered[1].endYear
+    };
+  }
+
+  const isoDate = normalized.match(/\b(\d{3,5})-(\d{1,2})-(\d{1,2})\b/);
+  if (isoDate && Number(isoDate[2]) >= 1 && Number(isoDate[2]) <= 12) {
+    return calendarPointRange(Number(isoDate[1]), Number(isoDate[2]) - 1, Number(isoDate[3]), isBce);
+  }
+
+  const numericDate = normalized.match(/(?:^|\s)(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{3,5})(?:\s|$)/);
+  if (numericDate && Number(numericDate[2]) >= 1 && Number(numericDate[2]) <= 12) {
+    return calendarPointRange(Number(numericDate[3]), Number(numericDate[2]) - 1, Number(numericDate[1]), isBce);
+  }
+
+  const numericMonth = normalized.match(/(?:^|\s)(\d{1,2})[/.](\d{3,5})(?:\s|$)/);
+  if (numericMonth && Number(numericMonth[1]) >= 1 && Number(numericMonth[1]) <= 12) {
+    return calendarPointRange(Number(numericMonth[2]), Number(numericMonth[1]) - 1, 1, isBce);
+  }
+
   const years = [...normalized.matchAll(/\d{1,5}/g)].map((match) => Number(match[0]));
   if (!years.length) return null;
-  const isBce = /av\.?\s*j/i.test(normalized) || /avant/i.test(normalized) || /\b(?:bc|bce)\b/i.test(normalized);
 
-  const normalizedLower = normalized.toLocaleLowerCase("fr-FR");
-  const hasCalendarMonth = [
-    "janvier", "février", "mars", "avril", "mai", "juin",
-    "juillet", "août", "septembre", "octobre", "novembre", "décembre",
-    "january", "february", "march", "april", "may", "june",
-    "july", "august", "september", "october", "november", "december"
-  ].some((month) => normalizedLower.includes(month));
+  const searchableDate = normalized
+    .toLocaleLowerCase("fr-FR")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  let monthIndex = -1;
+  let monthMatchIndex = -1;
+  MONTH_ALIASES.some((aliases, index) => aliases.some((alias) => {
+    const match = new RegExp(`\\b${alias}\\.?\\b`).exec(searchableDate);
+    if (!match) return false;
+    monthIndex = index;
+    monthMatchIndex = match.index;
+    return true;
+  }));
 
-  if (hasCalendarMonth) {
+  if (monthIndex >= 0) {
     const year = years[years.length - 1];
-    const signedYear = isBce && year > 0 ? -year : year;
-    return { start: signedYear, end: signedYear };
+    const dayMatch = searchableDate.slice(0, monthMatchIndex).match(/(\d{1,2})(?:er)?\s*$/);
+    return calendarPointRange(year, monthIndex, Number(dayMatch?.[1]) || 1, isBce);
   }
 
   const signed = years.map((year) => (isBce && year > 0 ? -year : year));
   return {
     start: signed[0],
-    end: signed[1] ?? signed[0]
+    end: signed[1] ?? signed[0],
+    startYear: signed[0],
+    endYear: signed[1] ?? signed[0]
   };
+}
+
+function parseCenturyRange(value, isBce, yearsPerUnit = 100, unit = "(?:siecles?|centur(?:y|ies))") {
+  const ordinal = "([IVXLCDM]+|[1-9][0-9]*)(?:eme|er|re|e|st|nd|rd|th)?";
+  const pattern = new RegExp(`^${ordinal}\\s*(?:${unit}\\s*)?(?:(?:[-–—]|a|au|to)\\s*${ordinal}\\s*)?${unit}(?:\\s+(?:av\\.?\\s*j\\.?-?c\\.?|avant\\s+jesus-?christ|bc|bce))?$`, "i");
+  const match = value.trim().match(pattern);
+  if (!match) return null;
+  const first = parseCenturyNumber(match[1]);
+  const last = parseCenturyNumber(match[2] || match[1]);
+  if (!first || !last) return null;
+  const low = Math.min(first, last);
+  const high = Math.max(first, last);
+  const start = isBce ? -high * yearsPerUnit : (low - 1) * yearsPerUnit + 1;
+  const end = isBce ? -((low - 1) * yearsPerUnit + 1) : high * yearsPerUnit;
+  // The final year is inclusive; its upper boundary is the next year's start.
+  return { start, end: end + 1, startYear: start, endYear: end };
+}
+
+function parseCenturyNumber(value) {
+  if (/^[1-9][0-9]*$/.test(value)) return Number(value);
+  const roman = value.toUpperCase();
+  if (!/^(?=.)M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$/.test(roman)) return null;
+  const digits = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };
+  return [...roman].reduce((total, digit, index) => {
+    const amount = digits[digit];
+    return total + (amount < (digits[roman[index + 1]] || 0) ? -amount : amount);
+  }, 0);
+}
+
+function calendarPointRange(year, monthIndex, day, isBce = false) {
+  const signedYear = isBce && year > 0 ? -year : year;
+  const monthDays = daysInMonth(year, monthIndex);
+  const safeDay = clamp(day, 1, monthDays);
+  const position = signedYear + monthIndex / 12 + (safeDay - 1) / (monthDays * 12);
+  return { start: position, end: position, startYear: signedYear, endYear: signedYear };
+}
+
+function daysInMonth(year, monthIndex) {
+  return new Date(Date.UTC(Math.max(1, year), monthIndex + 1, 0)).getUTCDate();
 }
 
 function sortByStart(a, b) {
@@ -800,14 +921,15 @@ function buildTimelineSvg(markers, options = {}) {
   const cardHeight = Math.max(...cardMetrics.map((metric) => metric.height));
   const height = Math.max(680, 360 + markers.length * Math.max(50, cardHeight * 0.55)) + 28;
   const axisY = Math.round(height * 0.48);
-  const minYear = Math.min(...markers.map((marker) => marker.start));
-  const maxYear = Math.max(...markers.map((marker) => marker.end));
-  const paddedMin = minYear === maxYear ? minYear - 5 : minYear;
-  const paddedMax = minYear === maxYear ? maxYear + 5 : maxYear;
-  const positions = getPositions(markers, paddedMin, paddedMax, width, margin);
+  const scale = getTimelineScale(markers);
+  const positions = getPositions(markers, scale.min, scale.max, width, margin);
   const title = escapeXml(els.title.value.trim() || tr("defaultTimelineTitle"));
   const subtitle = escapeXml(els.subtitle.value.trim());
-  const ticks = getTicks(paddedMin, paddedMax, width, margin);
+  const ticks = !labelVisibility.axisDates
+    ? []
+    : scale.monthly
+      ? getMonthlyTicks(scale.startMonth, scale.endMonth, width, margin)
+      : getTicks(scale.min, scale.max, width, margin);
   const lanes = distributeLanes(markers, positions, axisY, density, width, cardWidth, cardHeight);
   const filterId = `printImage-${variant}`;
   const arrowTipX = width - margin.right + 36;
@@ -829,7 +951,7 @@ function buildTimelineSvg(markers, options = {}) {
     lane.cardHeight = Math.max(lane.cardHeight, metric.height);
     const cardY = lane.y;
     const connectorEnd = getRectangleEdgePoint(x, axisY, lane.x, cardY, lane.cardWidth, lane.cardHeight);
-    const tone = palette.events[index % palette.events.length];
+    const tone = palette.events[isDuration ? 1 : 0] || palette.events[0];
     const connector = `<line class="marker-connector" data-key="${escapeXml(key)}" data-anchor-x="${x}" data-axis-y="${axisY}" x1="${x}" y1="${axisY}" x2="${connectorEnd.x}" y2="${connectorEnd.y}" stroke="${tone}" stroke-width="2"/>`;
     const bubbleX = lane.x + 36;
     const bubbleY = cardY + lane.cardHeight / 2;
@@ -851,7 +973,7 @@ function buildTimelineSvg(markers, options = {}) {
 
     const periodMark = isDuration
       ? `<g class="timeline-period" data-key="${escapeXml(key)}" data-orientation="horizontal" data-min="${margin.left}" data-max="${width - margin.right}" data-start-x="${x1}" data-end-x="${x2}">
-          <rect class="timeline-period-bar" x="${x1}" y="${axisY - 7}" width="${Math.max(18, x2 - x1)}" height="14" rx="7" fill="${tone}"/>
+          <rect class="timeline-period-bar" x="${x1}" y="${axisY - 7}" width="${Math.max(0, x2 - x1)}" height="14" rx="7" fill="${tone}"/>
           ${draggable ? `<circle class="timeline-period-handle" data-edge="start" cx="${x1}" cy="${axisY}" r="9" fill="${palette.cardFill || "#ffffff"}" stroke="${tone}" stroke-width="3" aria-label="${escapeXml(tr("resizeStart", { title: marker.title }))}"/>
           <circle class="timeline-period-handle" data-edge="end" cx="${x2}" cy="${axisY}" r="9" fill="${palette.cardFill || "#ffffff"}" stroke="${tone}" stroke-width="3" aria-label="${escapeXml(tr("resizeEnd", { title: marker.title }))}"/>` : ""}
         </g>`
@@ -865,7 +987,7 @@ function buildTimelineSvg(markers, options = {}) {
       underlay: `${connector}${periodMark}`,
       pointControl,
       card: `<g class="timeline-card-node" data-key="${escapeXml(key)}" data-x="${lane.x}" data-y="${cardY}" data-width="${lane.cardWidth}" data-height="${lane.cardHeight}" data-anchor-x="${x}" ${draggable ? `tabindex="0" role="button" aria-label="${escapeXml(tr("moveCard", { title: marker.title }))}"` : `aria-hidden="true"`}>
-        <rect x="${lane.x}" y="${cardY}" width="${lane.cardWidth}" height="${lane.cardHeight}" rx="10" fill="${palette.cardFill || "#ffffff"}" stroke="${tone}" stroke-width="2"/>
+        <rect x="${lane.x}" y="${cardY}" width="${lane.cardWidth}" height="${lane.cardHeight}" rx="10" fill="${(isDuration && palette.periodFill) || palette.cardFill || "#ffffff"}" stroke="${tone}" stroke-width="2"/>
         ${imageBubble}
         ${labelVisibility.dates
           ? svgTextBlock(metric.dateLines, textX, dateY, 20, `fill="${palette.ink}" font-family="Poppins, sans-serif" font-size="18" font-weight="800"`)
@@ -874,7 +996,7 @@ function buildTimelineSvg(markers, options = {}) {
           ? svgTextBlock(metric.titleLines, textX, titleY, 20, `fill="${palette.ink}" font-family="Poppins, sans-serif" font-size="17" font-weight="800"`)
           : ""}
         ${metric.keywordLines.length
-          ? svgTextBlock(metric.keywordLines, textX, keywordsY, 17, `class="timeline-keywords" fill="${palette.muted}" font-family="Source Sans Pro, sans-serif" font-size="14" font-weight="400"`)
+          ? svgTextBlock(metric.keywordLines, textX, keywordsY, 17, `class="timeline-keywords" fill="${isDuration ? palette.ink : palette.muted}" font-family="Source Sans Pro, sans-serif" font-size="14" font-weight="400"`)
           : ""}
         ${resizeHandle}
       </g>`
@@ -893,7 +1015,14 @@ function buildTimelineSvg(markers, options = {}) {
       <text x="${width / 2}" y="56" text-anchor="middle" fill="${palette.ink}" font-family="Poppins, sans-serif" font-size="34" font-weight="900">${truncateSvg(title, 54)}</text>
       ${subtitle ? `<text x="${width / 2}" y="88" text-anchor="middle" fill="${palette.muted}" font-family="Source Sans Pro, sans-serif" font-size="19" font-weight="700">${truncateSvg(subtitle, 82)}</text>` : ""}
       <line class="timeline-axis" x1="${margin.left - 32}" y1="${axisY}" x2="${arrowBaseX}" y2="${axisY}" stroke="${palette.ink}" stroke-width="5" stroke-linecap="round"/>
-      ${ticks.map((tick) => `<g><line x1="${tick.x}" y1="${axisY - 13}" x2="${tick.x}" y2="${axisY + 13}" stroke="${palette.ink}" stroke-width="2"/><text x="${tick.x}" y="${axisY + 24 + axisDateFontSize}" text-anchor="middle" fill="${palette.muted}" font-family="Source Sans Pro, sans-serif" font-size="${axisDateFontSize}" font-weight="800">${formatYear(tick.year)}</text></g>`).join("")}
+      ${ticks.map((tick) => {
+        if (tick.labelOnly) {
+          return `<text class="timeline-axis-date timeline-axis-year-label" x="${tick.x}" y="${axisY + 24 + axisDateFontSize}" text-anchor="middle" fill="${palette.muted}" font-family="Source Sans Pro, sans-serif" font-size="${axisDateFontSize}" font-weight="800">${escapeXml(tick.label)}</text>`;
+        }
+        const tickSize = tick.minor ? 7 : 13;
+        const label = tick.label === undefined ? formatYear(tick.year) : tick.label;
+        return `<g class="timeline-axis-tick${tick.minor ? " timeline-axis-tick--month" : ""}"><line x1="${tick.x}" y1="${axisY - tickSize}" x2="${tick.x}" y2="${axisY + tickSize}" stroke="${palette.ink}" stroke-width="${tick.minor ? 1 : 2}"/>${label ? `<text class="timeline-axis-date" x="${tick.x}" y="${axisY + 24 + axisDateFontSize}" text-anchor="middle" fill="${palette.muted}" font-family="Source Sans Pro, sans-serif" font-size="${axisDateFontSize}" font-weight="800">${escapeXml(label)}</text>` : ""}</g>`;
+      }).join("")}
       ${events}
       <path class="timeline-axis-arrow" d="M ${arrowBaseX} ${axisY - 13} L ${arrowTipX} ${axisY} L ${arrowBaseX} ${axisY + 13} Z" fill="${palette.ink}"/>
       ${timelineCredit}
@@ -915,14 +1044,15 @@ function buildVerticalTimelineSvg(markers, options = {}) {
   const gapY = [28, 22][density];
   const height = Math.max(1180, 270 + Math.ceil(markers.length / 2) * (cardHeight + gapY));
   const axisX = width / 2;
-  const minYear = Math.min(...markers.map((marker) => marker.start));
-  const maxYear = Math.max(...markers.map((marker) => marker.end));
-  const paddedMin = minYear === maxYear ? minYear - 5 : minYear;
-  const paddedMax = minYear === maxYear ? maxYear + 5 : maxYear;
-  const positions = getVerticalPositions(markers, paddedMin, paddedMax, height, margin);
+  const scale = getTimelineScale(markers);
+  const positions = getVerticalPositions(markers, scale.min, scale.max, height, margin);
   const title = escapeXml(els.title.value.trim() || tr("defaultTimelineTitle"));
   const subtitle = escapeXml(els.subtitle.value.trim());
-  const ticks = getVerticalTicks(paddedMin, paddedMax, height, margin);
+  const ticks = !labelVisibility.axisDates
+    ? []
+    : scale.monthly
+      ? getVerticalMonthlyTicks(scale.startMonth, scale.endMonth, height, margin)
+      : getVerticalTicks(scale.min, scale.max, height, margin);
   const lanes = distributeVerticalLanes(markers, positions, axisX, density, width, height, cardWidth, cardHeight, margin);
   const filterId = `printImage-${variant}`;
   const arrowTipY = height - margin.bottom + 38;
@@ -945,7 +1075,7 @@ function buildVerticalTimelineSvg(markers, options = {}) {
     lane.cardHeight = Math.max(lane.cardHeight, metric.height);
     const cardY = lane.y;
     const connectorEnd = getRectangleEdgePoint(axisX, anchorY, lane.x, cardY, lane.cardWidth, lane.cardHeight);
-    const tone = palette.events[index % palette.events.length];
+    const tone = palette.events[isDuration ? 1 : 0] || palette.events[0];
     const connector = `<line class="marker-connector" data-key="${escapeXml(key)}" data-orientation="vertical" data-anchor-y="${anchorY}" data-axis-x="${axisX}" x1="${axisX}" y1="${anchorY}" x2="${connectorEnd.x}" y2="${connectorEnd.y}" stroke="${tone}" stroke-width="2"/>`;
     const bubbleX = lane.x + 36;
     const bubbleY = cardY + lane.cardHeight / 2;
@@ -966,7 +1096,7 @@ function buildVerticalTimelineSvg(markers, options = {}) {
       : "";
     const periodMark = isDuration
       ? `<g class="timeline-period timeline-period--vertical" data-key="${escapeXml(key)}" data-orientation="vertical" data-min="${margin.top}" data-max="${height - margin.bottom}" data-start-y="${y1}" data-end-y="${y2}">
-          <rect class="timeline-period-bar" x="${axisX - 7}" y="${y1}" width="14" height="${Math.max(18, y2 - y1)}" rx="7" fill="${tone}"/>
+          <rect class="timeline-period-bar" x="${axisX - 7}" y="${y1}" width="14" height="${Math.max(0, y2 - y1)}" rx="7" fill="${tone}"/>
           ${draggable ? `<circle class="timeline-period-handle" data-edge="start" cx="${axisX}" cy="${y1}" r="9" fill="${palette.cardFill || "#ffffff"}" stroke="${tone}" stroke-width="3" aria-label="${escapeXml(tr("resizeStart", { title: marker.title }))}"/>
           <circle class="timeline-period-handle" data-edge="end" cx="${axisX}" cy="${y2}" r="9" fill="${palette.cardFill || "#ffffff"}" stroke="${tone}" stroke-width="3" aria-label="${escapeXml(tr("resizeEnd", { title: marker.title }))}"/>` : ""}
         </g>`
@@ -980,7 +1110,7 @@ function buildVerticalTimelineSvg(markers, options = {}) {
       underlay: `${connector}${periodMark}`,
       pointControl,
       card: `<g class="timeline-card-node" data-key="${escapeXml(key)}" data-x="${lane.x}" data-y="${cardY}" data-width="${lane.cardWidth}" data-height="${lane.cardHeight}" data-anchor-y="${anchorY}" ${draggable ? `tabindex="0" role="button" aria-label="${escapeXml(tr("moveCard", { title: marker.title }))}"` : `aria-hidden="true"`}>
-        <rect x="${lane.x}" y="${cardY}" width="${lane.cardWidth}" height="${lane.cardHeight}" rx="10" fill="${palette.cardFill || "#ffffff"}" stroke="${tone}" stroke-width="2"/>
+        <rect x="${lane.x}" y="${cardY}" width="${lane.cardWidth}" height="${lane.cardHeight}" rx="10" fill="${(isDuration && palette.periodFill) || palette.cardFill || "#ffffff"}" stroke="${tone}" stroke-width="2"/>
         ${imageBubble}
         ${labelVisibility.dates
           ? svgTextBlock(metric.dateLines, textX, dateY, 20, `fill="${palette.ink}" font-family="Poppins, sans-serif" font-size="18" font-weight="800"`)
@@ -989,7 +1119,7 @@ function buildVerticalTimelineSvg(markers, options = {}) {
           ? svgTextBlock(metric.titleLines, textX, titleY, 20, `fill="${palette.ink}" font-family="Poppins, sans-serif" font-size="17" font-weight="800"`)
           : ""}
         ${metric.keywordLines.length
-          ? svgTextBlock(metric.keywordLines, textX, keywordsY, 17, `class="timeline-keywords" fill="${palette.muted}" font-family="Source Sans Pro, sans-serif" font-size="14" font-weight="400"`)
+          ? svgTextBlock(metric.keywordLines, textX, keywordsY, 17, `class="timeline-keywords" fill="${isDuration ? palette.ink : palette.muted}" font-family="Source Sans Pro, sans-serif" font-size="14" font-weight="400"`)
           : ""}
         ${resizeHandle}
       </g>`
@@ -1008,7 +1138,14 @@ function buildVerticalTimelineSvg(markers, options = {}) {
       <text x="${width / 2}" y="56" text-anchor="middle" fill="${palette.ink}" font-family="Poppins, sans-serif" font-size="32" font-weight="900">${truncateSvg(title, 42)}</text>
       ${subtitle ? `<text x="${width / 2}" y="88" text-anchor="middle" fill="${palette.muted}" font-family="Source Sans Pro, sans-serif" font-size="18" font-weight="700">${truncateSvg(subtitle, 58)}</text>` : ""}
       <line class="timeline-axis" x1="${axisX}" y1="${margin.top - 32}" x2="${axisX}" y2="${arrowBaseY}" stroke="${palette.ink}" stroke-width="5" stroke-linecap="round"/>
-      ${ticks.map((tick) => `<g><line x1="${axisX - 13}" y1="${tick.y}" x2="${axisX + 13}" y2="${tick.y}" stroke="${palette.ink}" stroke-width="2"/><text x="${axisX - 19}" y="${tick.y + axisDateFontSize * 0.34}" text-anchor="end" fill="${palette.muted}" stroke="#ffffff" stroke-width="5" paint-order="stroke" font-family="Source Sans Pro, sans-serif" font-size="${axisDateFontSize}" font-weight="800">${formatYear(tick.year)}</text></g>`).join("")}
+      ${ticks.map((tick) => {
+        if (tick.labelOnly) {
+          return `<text class="timeline-axis-date timeline-axis-year-label" x="${axisX - 19}" y="${tick.y + axisDateFontSize * 0.34}" text-anchor="end" fill="${palette.muted}" stroke="#ffffff" stroke-width="5" paint-order="stroke" font-family="Source Sans Pro, sans-serif" font-size="${axisDateFontSize}" font-weight="800">${escapeXml(tick.label)}</text>`;
+        }
+        const tickSize = tick.minor ? 7 : 13;
+        const label = tick.label === undefined ? formatYear(tick.year) : tick.label;
+        return `<g class="timeline-axis-tick${tick.minor ? " timeline-axis-tick--month" : ""}"><line x1="${axisX - tickSize}" y1="${tick.y}" x2="${axisX + tickSize}" y2="${tick.y}" stroke="${palette.ink}" stroke-width="${tick.minor ? 1 : 2}"/>${label ? `<text class="timeline-axis-date" x="${axisX - 19}" y="${tick.y + axisDateFontSize * 0.34}" text-anchor="end" fill="${palette.muted}" stroke="#ffffff" stroke-width="5" paint-order="stroke" font-family="Source Sans Pro, sans-serif" font-size="${axisDateFontSize}" font-weight="800">${escapeXml(label)}</text>` : ""}</g>`;
+      }).join("")}
       ${events}
       <path class="timeline-axis-arrow" d="M ${axisX - 13} ${arrowBaseY} L ${axisX} ${arrowTipY} L ${axisX + 13} ${arrowBaseY} Z" fill="${palette.ink}"/>
       ${timelineCredit}
@@ -1051,6 +1188,7 @@ function applyPeriodOverride(position, key, width, margin) {
   const saved = layoutOverrides[key] || {};
   const savedStart = Number(saved.periodStartX);
   const savedEnd = Number(saved.periodEndX);
+  if (!Number.isFinite(savedStart) && !Number.isFinite(savedEnd)) return { ...position };
   const start = Number.isFinite(savedStart) ? savedStart : position.start;
   const end = Number.isFinite(savedEnd) ? savedEnd : position.end;
   return {
@@ -1070,6 +1208,7 @@ function applyVerticalPeriodOverride(position, key, height, margin) {
   const saved = layoutOverrides[key] || {};
   const savedStart = Number(saved.periodStartY);
   const savedEnd = Number(saved.periodEndY);
+  if (!Number.isFinite(savedStart) && !Number.isFinite(savedEnd)) return { ...position };
   const start = Number.isFinite(savedStart) ? savedStart : position.start;
   const end = Number.isFinite(savedEnd) ? savedEnd : position.end;
   return {
@@ -1460,7 +1599,7 @@ function setPeriodRange(svg, period, key, startCoord, endCoord) {
     period.dataset.startY = String(startCoord);
     period.dataset.endY = String(endCoord);
     bar.setAttribute("y", startCoord);
-    bar.setAttribute("height", Math.max(18, endCoord - startCoord));
+    bar.setAttribute("height", Math.max(0, endCoord - startCoord));
     if (startHandle) startHandle.setAttribute("cy", startCoord);
     if (endHandle) endHandle.setAttribute("cy", endCoord);
     if (connector) {
@@ -1475,7 +1614,7 @@ function setPeriodRange(svg, period, key, startCoord, endCoord) {
   period.dataset.startX = String(startCoord);
   period.dataset.endX = String(endCoord);
   bar.setAttribute("x", startCoord);
-  bar.setAttribute("width", Math.max(18, endCoord - startCoord));
+  bar.setAttribute("width", Math.max(0, endCoord - startCoord));
   if (startHandle) startHandle.setAttribute("cx", startCoord);
   if (endHandle) endHandle.setAttribute("cx", endCoord);
   if (connector) {
@@ -1516,23 +1655,99 @@ function getLabelVisibility(variant = currentMode) {
   return {
     blank,
     dates: !settings.hideDates,
+    axisDates: !settings.hideAxisDates,
     titles: !settings.hideTitles,
     keywords: !settings.hideKeywords,
     images: !settings.hideImages
   };
 }
 
-function getPositions(markers, minYear, maxYear, width, margin) {
-  const usable = width - margin.left - margin.right;
-  if (maxYear - minYear > 450) {
-    const step = usable / Math.max(1, markers.length - 1);
-    return markers.map((marker, index) => ({
-      start: margin.left + index * step,
-      end: margin.left + index * step + (marker.end > marker.start ? Math.min(90, step * 0.65) : 0)
-    }));
+function getTimelineScale(markers) {
+  const firstYear = Math.min(...markers.map((marker) => marker.startYear ?? Math.floor(marker.start)));
+  const lastYear = Math.max(...markers.map((marker) => marker.endYear ?? Math.floor(marker.end)));
+  const calendarYearCount = lastYear - firstYear + 1;
+  if (calendarYearCount >= 1 && calendarYearCount <= 2) {
+    const rawMin = Math.min(...markers.map((marker) => marker.start));
+    const rawMax = Math.max(...markers.map((marker) => marker.end));
+    let startMonth = Math.floor(rawMin * 12 + 1e-7);
+    let endMonth = Math.ceil(rawMax * 12 - 1e-7);
+
+    if (endMonth <= startMonth) {
+      startMonth = firstYear * 12;
+      endMonth = (firstYear + 1) * 12;
+    }
+
+    return {
+      firstYear,
+      lastYear,
+      startMonth,
+      endMonth,
+      min: startMonth / 12,
+      max: endMonth / 12,
+      monthly: true
+    };
   }
 
-  const toX = (year) => margin.left + ((year - minYear) / Math.max(1, maxYear - minYear)) * usable;
+  const min = Math.min(...markers.map((marker) => marker.start));
+  const max = Math.max(...markers.map((marker) => marker.end));
+  return {
+    firstYear,
+    lastYear,
+    min: min === max ? min - 5 : min,
+    max: min === max ? max + 5 : max,
+    monthly: false
+  };
+}
+
+function getMonthlyTicks(startMonth, endMonth, width, margin) {
+  const totalMonths = Math.max(1, endMonth - startMonth);
+  const usable = width - margin.left - margin.right;
+  const boundaries = Array.from({ length: totalMonths + 1 }, (_, index) => {
+    const absoluteMonth = startMonth + index;
+    const isYearBoundary = modulo(absoluteMonth, 12) === 0;
+    const isEndpoint = index === 0 || index === totalMonths;
+    return {
+      x: margin.left + (index / totalMonths) * usable,
+      minor: !isYearBoundary && !isEndpoint,
+      label: isEndpoint ? formatMonthTick(absoluteMonth) : ""
+    };
+  });
+  return boundaries;
+}
+
+function getVerticalMonthlyTicks(startMonth, endMonth, height, margin) {
+  const totalMonths = Math.max(1, endMonth - startMonth);
+  const usable = height - margin.top - margin.bottom;
+  const boundaries = Array.from({ length: totalMonths + 1 }, (_, index) => {
+    const absoluteMonth = startMonth + index;
+    const isYearBoundary = modulo(absoluteMonth, 12) === 0;
+    const isEndpoint = index === 0 || index === totalMonths;
+    return {
+      y: margin.top + (index / totalMonths) * usable,
+      minor: !isYearBoundary && !isEndpoint,
+      label: isEndpoint ? formatMonthTick(absoluteMonth) : ""
+    };
+  });
+  return boundaries;
+}
+
+function formatMonthTick(absoluteMonth) {
+  const month = new Intl.DateTimeFormat(currentLanguage === "en" ? "en-GB" : "fr-FR", {
+    month: "short",
+    timeZone: "UTC"
+  }).format(new Date(Date.UTC(2000, modulo(absoluteMonth, 12), 1)));
+  return `${month} ${formatYear(Math.floor(absoluteMonth / 12))}`;
+}
+
+function modulo(value, divisor) {
+  return ((value % divisor) + divisor) % divisor;
+}
+
+function getPositions(markers, minYear, maxYear, width, margin) {
+  const usable = width - margin.left - margin.right;
+
+  const span = maxYear > minYear ? maxYear - minYear : 1;
+  const toX = (year) => margin.left + ((year - minYear) / span) * usable;
   return markers.map((marker) => ({
     start: toX(marker.start),
     end: toX(marker.end)
@@ -1541,15 +1756,9 @@ function getPositions(markers, minYear, maxYear, width, margin) {
 
 function getVerticalPositions(markers, minYear, maxYear, height, margin) {
   const usable = height - margin.top - margin.bottom;
-  if (maxYear - minYear > 450) {
-    const step = usable / Math.max(1, markers.length - 1);
-    return markers.map((marker, index) => ({
-      start: margin.top + index * step,
-      end: margin.top + index * step + (marker.end > marker.start ? Math.min(100, step * 0.65) : 0)
-    }));
-  }
 
-  const toY = (year) => margin.top + ((year - minYear) / Math.max(1, maxYear - minYear)) * usable;
+  const span = maxYear > minYear ? maxYear - minYear : 1;
+  const toY = (year) => margin.top + ((year - minYear) / span) * usable;
   return markers.map((marker) => ({
     start: toY(marker.start),
     end: toY(marker.end)
@@ -1636,16 +1845,26 @@ function distributeLanes(markers, positions, axisY, density, width, cardWidth, c
   const gapY = [24, 18][density];
   const used = { top: [], bottom: [] };
 
-  return markers.map((marker, index) => {
+  const planned = markers.map((marker, index) => {
     const side = index % 2 === 0 ? "top" : "bottom";
     const x = (positions[index].start + positions[index].end) / 2;
     const baseX = clamp(x - cardWidth / 2, 24, width - cardWidth - 24);
     const laneIndex = findLane(used[side], baseX, cardWidth);
     used[side][laneIndex] = baseX + cardWidth + 12;
+    return { side, x: baseX, laneIndex, cardWidth, cardHeight };
+  });
+
+  const topLaneCount = planned.reduce(
+    (count, lane) => lane.side === "top" ? Math.max(count, lane.laneIndex + 1) : count,
+    0
+  );
+
+  return planned.map((lane) => {
+    const { side, x, laneIndex } = lane;
     const y = side === "top"
-      ? axisY - (laneIndex + 1) * (cardHeight + gapY) - 26
+      ? axisY - (topLaneCount - laneIndex) * (cardHeight + gapY) - 26
       : axisY + 52 + laneIndex * (cardHeight + gapY);
-    return { side, x: baseX, y, cardWidth, cardHeight };
+    return { side, x, y, cardWidth, cardHeight };
   });
 }
 
@@ -1676,15 +1895,23 @@ function findLane(lanes, x, width) {
 
 function getTicks(minYear, maxYear, width, margin) {
   const span = Math.max(1, maxYear - minYear);
-  const roughStep = span / 6;
+  if (maxYear - minYear === 1) {
+    return [minYear, maxYear].map((year) => ({
+      year,
+      x: margin.left + ((year - minYear) / span) * (width - margin.left - margin.right)
+    }));
+  }
+  const roughStep = Math.max(1, span / 6);
   const magnitude = 10 ** Math.floor(Math.log10(roughStep));
   const step = [1, 2, 5, 10].map((factor) => factor * magnitude).find((value) => value >= roughStep) || magnitude * 10;
   const start = Math.ceil(minYear / step) * step;
   const ticks = [];
   for (let year = start; year <= maxYear; year += step) {
+    const tickYear = year === 0 ? 1 : year;
+    if (tickYear > maxYear || ticks.some((tick) => tick.year === tickYear)) continue;
     ticks.push({
-      year,
-      x: margin.left + ((year - minYear) / span) * (width - margin.left - margin.right)
+      year: tickYear,
+      x: margin.left + ((tickYear - minYear) / span) * (width - margin.left - margin.right)
     });
   }
   return ticks.slice(0, 9);
@@ -1692,15 +1919,23 @@ function getTicks(minYear, maxYear, width, margin) {
 
 function getVerticalTicks(minYear, maxYear, height, margin) {
   const span = Math.max(1, maxYear - minYear);
-  const roughStep = span / 7;
+  if (maxYear - minYear === 1) {
+    return [minYear, maxYear].map((year) => ({
+      year,
+      y: margin.top + ((year - minYear) / span) * (height - margin.top - margin.bottom)
+    }));
+  }
+  const roughStep = Math.max(1, span / 7);
   const magnitude = 10 ** Math.floor(Math.log10(roughStep));
   const step = [1, 2, 5, 10].map((factor) => factor * magnitude).find((value) => value >= roughStep) || magnitude * 10;
   const start = Math.ceil(minYear / step) * step;
   const ticks = [];
   for (let year = start; year <= maxYear; year += step) {
+    const tickYear = year === 0 ? 1 : year;
+    if (tickYear > maxYear || ticks.some((tick) => tick.year === tickYear)) continue;
     ticks.push({
-      year,
-      y: margin.top + ((year - minYear) / span) * (height - margin.top - margin.bottom)
+      year: tickYear,
+      y: margin.top + ((tickYear - minYear) / span) * (height - margin.top - margin.bottom)
     });
   }
   return ticks.slice(0, 10);
@@ -2224,6 +2459,7 @@ function updatePrintPageSize() {
 }
 
 function formatYear(year) {
+  if (year === 0) return "1";
   if (year >= 0) return String(year);
   return currentLanguage === "en" ? `${Math.abs(year)} BC` : `${Math.abs(year)} av. J.-C.`;
 }

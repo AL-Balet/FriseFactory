@@ -7,8 +7,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800;900&family=Source+Sans+Pro:wght@400;600;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=20260911-preview-help-line">
-    <script src="app.js?v=20260911-fullscreen-drag-fix-v2" defer></script>
+    <link rel="stylesheet" href="styles.css?v=20260912-marker-count-box">
+    <script src="app.js?v=20260912-period-fill" defer></script>
   </head>
   <body>
     <header class="app-header">
@@ -54,11 +54,17 @@
           <textarea id="markersInput" rows="12" spellcheck="true"></textarea>
         </label>
 
+        <p class="marker-content-note status-box">
+          <svg class="marker-tip-icon" viewBox="0 0 32 32" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M16 2v3.6M5.7 6.4l2.7 2.7M26.3 6.4l-2.7 2.7M2 16h3.7M26.3 16H30M11.4 21.7a7.3 7.3 0 1 1 9.2 0c-1.5 1.4-1.6 3.1-1.6 4.4h-6c0-1.3-.1-3-1.6-4.4ZM13.3 26.1v2a2 2 0 0 0 2 2h1.4a2 2 0 0 0 2-2v-2M12.5 15a3.7 3.7 0 0 1 3.5-2.7"/></svg>
+          <span>Vous pouvez intégrer à votre frise une date ou une période, le nom de l’événement, des mots-clés et une image.</span>
+        </p>
+
         <div class="format-hint">
           <strong>Formats acceptés</strong>
           <span>Juin 1945 : Création de l'ONU</span>
           <span>6 juin 1944 ; Débarquement de Normandie</span>
           <span>1914-1918 | Première Guerre mondiale</span>
+          <span>XIe-XIIIe siècles ; Essor des villes médiévales</span>
           <span>1944 ; Droit de vote des femmes ; citoyenneté, suffrage</span>
           <span>2002 ; Mise en circulation de l'euro ; monnaie, Union européenne ; URL Wikimedia</span>
         </div>
@@ -89,6 +95,7 @@
 
         <div class="check-grid">
           <label><input id="hideDates" type="checkbox"> Masquer les dates</label>
+          <label><input id="hideAxisDates" type="checkbox"> Masquer les dates de l’axe</label>
           <label><input id="hideTitles" type="checkbox"> Masquer les intitulés</label>
           <label><input id="hideKeywords" type="checkbox"> Masquer les mots-clés</label>
           <label><input id="hideImages" type="checkbox"> Masquer les images</label>
